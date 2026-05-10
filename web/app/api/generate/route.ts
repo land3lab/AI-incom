@@ -5,8 +5,6 @@ import pdf from 'pdf-parse';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 const PROMPT = `아래 부동산 문서를 분석하여 6가지 콘텐츠를 작성하세요.
 반드시 아래 구분자를 정확히 사용하세요.
 
@@ -75,6 +73,7 @@ function parseSections(text: string) {
 }
 
 export async function POST(req: NextRequest) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const form = await req.formData();
   const docFiles   = form.getAll('docs')   as File[];
   const photoFiles = form.getAll('photos') as File[];

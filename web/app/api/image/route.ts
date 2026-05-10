@@ -5,9 +5,6 @@ import { GoogleGenAI } from '@google/genai';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const openai  = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const gemini  = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY ?? '' });
-
 function buildPrompt(keyInfo: Record<string,string>) {
   return `Professional real estate exterior photograph. Korean building in ${keyInfo.address ?? '서울'}. `
     + `${keyInfo.usage ?? '건물'}, ${keyInfo.floors ?? ''}. `
@@ -15,6 +12,8 @@ function buildPrompt(keyInfo: Record<string,string>) {
 }
 
 export async function POST(req: NextRequest) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const gemini = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY ?? '' });
   const { keyInfo, provider } = await req.json() as { keyInfo: Record<string,string>; provider: string };
   const prompt = buildPrompt(keyInfo);
 
