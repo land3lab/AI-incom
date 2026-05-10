@@ -1,9 +1,0 @@
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "functions": {
-    "app/api/generate/route.ts": { "maxDuration": 60 },
-    "app/api/image/route.ts":    { "maxDuration": 60 }
-  }
-}

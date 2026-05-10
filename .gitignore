@@ -1,6 +1,11 @@
 .env
+.env.local
 .claude/
-.streamlit/secrets.toml
+.next/
+node_modules/
+out/
+.streamlit/
+memory/
 __pycache__/
 *.pyc
 *.pyo

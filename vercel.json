@@ -1,8 +1,6 @@
 {
-  "builds": [
-    {
-      "src": "web/package.json",
-      "use": "@vercel/next"
-    }
-  ]
+  "functions": {
+    "app/api/generate/route.ts": { "maxDuration": 60 },
+    "app/api/image/route.ts":    { "maxDuration": 60 }
+  }
 }
