@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const { to, message } = await req.json();
   const apiKey    = process.env.COOLSMS_API_KEY!;
