@@ -19,7 +19,13 @@ try:
 except ImportError:
     DOCX_OK = False
 
+# 로컬: .env 파일 / Streamlit Cloud: st.secrets 자동 사용
 load_dotenv()
+for _k in ["OPENAI_API_KEY","GOOGLE_API_KEY","GMAIL_ADDRESS","GMAIL_APP_PASSWORD",
+           "COOLSMS_API_KEY","COOLSMS_API_SECRET","COOLSMS_FROM_NUMBER",
+           "INSTAGRAM_ACCESS_TOKEN","INSTAGRAM_USER_ID","IMGBB_API_KEY"]:
+    if _k in st.secrets and not os.getenv(_k):
+        os.environ[_k] = st.secrets[_k]
 
 st.set_page_config(page_title="부동산 AI 콘텐츠 작성기", page_icon="🏠", layout="wide")
 st.title("🏠 부동산 AI 콘텐츠 작성기")
