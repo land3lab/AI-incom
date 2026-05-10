@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; }
+.tab-active  { @apply border-b-2 border-navy text-navy font-semibold; }
+.tab-inactive { @apply text-gray-500 hover:text-navy; }
