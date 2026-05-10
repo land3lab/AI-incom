@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
     const res = await openai.images.generate({
       model: 'gpt-image-1', prompt, size: '1024x1024', quality: 'low', n: 1,
     });
-    const b64 = res.data[0].b64_json!;
+    const b64 = res.data?.[0]?.b64_json;
+    if (!b64) return Response.json({ error: 'ChatGPT 이미지 데이터 없음' }, { status: 500 });
     return Response.json({ b64, mime: 'image/png' });
   }
 
