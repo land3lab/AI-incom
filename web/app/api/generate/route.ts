@@ -27,10 +27,10 @@ const PROMPT = `아래 부동산 문서를 분석하여 6가지 콘텐츠를 작
 [SEO 제목]: (핵심 키워드 포함, 50자 이내)
 [메타 설명]: (150자 이내)
 
-## (H2 소제목1 - 매물 소개)
-## (H2 소제목2 - 주요 정보)
-## (H2 소제목3 - 특징 및 투자 포인트)
-## (H2 소제목4 - 자주 묻는 질문)
+## 매물 소개
+## 주요 정보
+## 특징 및 투자 포인트
+## 자주 묻는 질문
 (마무리 및 해시태그 20개 이상)
 === 끝 ===
 
@@ -60,64 +60,76 @@ const PROMPT = `아래 부동산 문서를 분석하여 6가지 콘텐츠를 작
 
 function parseSections(text: string) {
   const keys = ['핵심정보','네이버블로그','인스타그램','쓰레드','쇼츠컨셉','매물소개서'];
-  const result: Record<string,string> = {};
+  const result: Record<string, string> = {};
   for (const key of keys) {
     try {
       const start = text.indexOf(`=== ${key} ===`) + `=== ${key} ===`.length;
       const end   = text.indexOf('=== 끝 ===', start);
       result[key] = text.slice(start, end).trim();
-    } catch { result[key] = '생성 실패'; }
+    } catch {
+      result[key] = '생성 실패';
+    }
   }
   return result;
 }
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
-  const docFiles = form.getAll('docs') as File[];
+  const docFiles   = form.getAll('docs')   as File[];
   const photoFiles = form.getAll('photos') as File[];
-  const additional = (form.get('additional') as string) || '';
+  const additional = (form.get('additional') as string) ?? '';
 
   const texts: string[] = [];
-  const visionImgs: { url: string }[] = [];
+  const visionUrls: string[] = [];
 
   for (const file of docFiles) {
     const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
     const buf = Buffer.from(await file.arrayBuffer());
+
     if (ext === 'pdf') {
       try {
         const { text } = await pdf(buf);
-        if (text.trim()) { texts.push(`[${file.name}]\n${text.slice(0,3000)}`); continue; }
-      } catch {}
+        if (text.trim()) {
+          texts.push(`[${file.name}]\n${text.slice(0, 3000)}`);
+          continue;
+        }
+      } catch { /* scanned PDF — fall through to vision */ }
     }
-    // image or scanned PDF → vision
-    const mime = ['jpg','jpeg'].includes(ext) ? 'image/jpeg' : ext === 'png' ? 'image/png' : 'image/jpeg';
-    visionImgs.push({ url: `data:${mime};base64,${buf.toString('base64')}` });
+
+    const mime = ['jpg', 'jpeg'].includes(ext) ? 'image/jpeg'
+               : ext === 'png' ? 'image/png' : 'image/jpeg';
+    visionUrls.push(`data:${mime};base64,${buf.toString('base64')}`);
   }
 
   for (const file of photoFiles) {
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-    const mime = ['jpg','jpeg'].includes(ext) ? 'image/jpeg' : `image/${ext}`;
-    const buf = Buffer.from(await file.arrayBuffer());
-    visionImgs.push({ url: `data:${mime};base64,${buf.toString('base64')}` });
+    const ext  = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const mime = ['jpg', 'jpeg'].includes(ext) ? 'image/jpeg' : `image/${ext}`;
+    const buf  = Buffer.from(await file.arrayBuffer());
+    visionUrls.push(`data:${mime};base64,${buf.toString('base64')}`);
   }
 
-  const combined = texts.join('\n\n---\n\n');
-  const context  = combined ? `[문서 내용]\n${combined}\n\n` : '[첨부 이미지에서 정보를 직접 읽어 분석해주세요]\n\n';
-  const addStr   = additional ? `[추가 강조사항]: ${additional}\n\n` : '';
-  const prompt   = PROMPT.replace('{CONTEXT}', context).replace('{ADDITIONAL}', addStr);
+  const combined  = texts.join('\n\n---\n\n');
+  const context   = combined
+    ? `[문서 내용]\n${combined}\n\n`
+    : '[첨부 이미지에서 정보를 직접 읽어 분석해주세요]\n\n';
+  const addStr    = additional ? `[추가 강조사항]: ${additional}\n\n` : '';
+  const prompt    = PROMPT.replace('{CONTEXT}', context).replace('{ADDITIONAL}', addStr);
 
-  type MsgContent = string | Array<{type:string; text?:string; image_url?:{url:string; detail:string}}>;
-  let content: MsgContent = prompt;
-  if (visionImgs.length > 0) {
-    content = [
-      { type:'text', text: prompt },
-      ...visionImgs.map(img => ({ type:'image_url', image_url:{ url: img.url, detail:'high' } })),
-    ];
-  }
+  // Build typed message content
+  const content: OpenAI.Chat.ChatCompletionUserMessageParam['content'] =
+    visionUrls.length === 0
+      ? prompt
+      : [
+          { type: 'text', text: prompt },
+          ...visionUrls.map(url => ({
+            type: 'image_url' as const,
+            image_url: { url, detail: 'high' as const },
+          })),
+        ];
 
   const res = await openai.chat.completions.create({
     model: 'gpt-4o',
-    messages: [{ role:'user', content: content as Parameters<typeof openai.chat.completions.create>[0]['messages'][0]['content'] }],
+    messages: [{ role: 'user', content }],
     max_tokens: 4000,
     temperature: 0.7,
   });
