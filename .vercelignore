@@ -1,0 +1,7 @@
+app.py
+requirements.txt
+.streamlit/
+memory/
+*.md
+*.pyc
+__pycache__/
